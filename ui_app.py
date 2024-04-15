@@ -11,8 +11,9 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, wait, Future, FIRST_COMPLETED
 
-from core import PHOTO_POST_PATH, get_photo_files
+from core import PHOTO_POST_PATH, get_photo_files, clear_photo_folder
 from photo_parser import product_count, start_downloading, add_after_row_callback, turn_off_parsing, is_works, ID
+from image_editor import formatting_images
 
 _MUTEX = threading.Lock()
 _T_EXECUTOR = ThreadPoolExecutor()
@@ -23,7 +24,6 @@ def start_parsing():
     total = product_count()
     progress_t = progress_t.format(total=total)
     progress_label.config(text=progress_t.format(count=0))
-    __switch_start_stop_button()
     
     add_after_row_callback(lambda: inc_progress(1))
     
@@ -37,10 +37,17 @@ def shutdown_showing():
     photo_dirs_q.put(None)
 
 def __switch_start_stop_button():
+    def __wrap(func):
+        def __wrapper(*args, **kwargs):
+            __switch_start_stop_button()
+            return func(*args, **kwargs)
+
+        return __wrapper
+        
     if progress_start_button.started:
-        progress_start_button.config(text="Начать обработку файла", command=start_parsing)
+        progress_start_button.config(text="Начать обработку файла", command=__wrap(start_parsing))
     else:
-        progress_start_button.config(text="Закончить обработку файла", command=turn_off_parsing) 
+        progress_start_button.config(text="Закончить обработку файла", command=__wrap(turn_off_parsing)) 
 
     progress_start_button.started = not progress_start_button.started
     
@@ -53,7 +60,7 @@ def _add_dir(photo_dir: str):
     photo_dirs_q.put(folder_path)
 
 def open_folder():
-    global photo_dirs, photo_dirs_q
+    global photo_dirs, photo_dirs_q, processed_photo_dirs_q
     
     with _MUTEX:
         def __callback(row):
@@ -64,11 +71,12 @@ def open_folder():
             if progress_count >= total:
                 shutdown_showing()
         
-        add_after_row_callback(__callback, in_end=False)
+        add_after_row_callback(__callback)
         add_after_row_callback(__check_end_progress)
     
         photo_dirs = []
         photo_dirs_q = queue.Queue()
+        processed_photo_dirs_q = queue.Queue()
         
         for _, dirs, _ in os.walk(PHOTO_POST_PATH):
             for dir_name in dirs:
@@ -84,6 +92,7 @@ def show_images_plate():
     root.title("Loading")
     root.geometry("2000x700")
     root.grid_columnconfigure((0,1,2), weight=1, uniform="column")
+    root.protocol("WM_DELETE_WINDOW", before_end)
     
     root.update()
     
@@ -104,14 +113,10 @@ def close_offer(cv: tk.Frame):
     root.update()
 
 def get_folder_path():
-    
-    if not is_works():
-        folder_path = photo_dirs_q.get()
-    else:
-        try:
-            folder_path = photo_dirs_q.get(block=False)
-        except queue.Empty:
-            folder_path = None
+    try:
+        folder_path = photo_dirs_q.get(block=False)
+    except queue.Empty:
+        folder_path = None
         
     return folder_path
 
@@ -123,7 +128,6 @@ def start_showing():
     folder_path = get_folder_path()
     
     if folder_path is None:
-        root.destroy()
         before_end()
         return
     
@@ -178,12 +182,20 @@ def delete_other_images(selected_image):
         widget.destroy()
     
     root.title("Loading")
+    
+    processed_photo_dirs_q.put(folder_path)
     photo_dirs_q.task_done()
     
     start_showing()
 
 def before_end():
-    for folder in photo_dirs:
+    def __get_q_item():
+        try:
+            return processed_photo_dirs_q.get(block=False)
+        except queue.Empty:
+            return None
+    
+    while (folder:=__get_q_item()):
         files = os.listdir(folder)
         
         if files:
@@ -198,7 +210,8 @@ def before_end():
             os.rename(file_path, new_file_path)
             
         shutil.rmtree(folder)
-        #resize_image(new_file_path)
+
+    root.destroy()
 
 def inc_progress(size=1):
     global progress_count
@@ -212,7 +225,8 @@ mainplate = tk.Tk()
 mainplate.title('Start Exel processing')
 
 progress_start_button = tk.Button(mainplate, text="Начать обработку файла", command=start_parsing)
-progress_start_button.started = False
+progress_start_button.started = True
+__switch_start_stop_button()
 progress_start_button.pack(pady=10)
 
 progress_t_default = f"Progress: ..."
@@ -223,6 +237,12 @@ progress_label.pack(pady=5)
 
 choosing_start_button = tk.Button(mainplate, text="Начать выбирать фото", command=show_images_plate)
 choosing_start_button.pack(pady=10)
+
+start_formatting = tk.Button(mainplate, text=f"Отформатировать все фото в папке {PHOTO_POST_PATH}", command=formatting_images)
+start_formatting.pack(pady=10)
+
+clear_folder_b = tk.Button(mainplate, text=f"Очистить все файлы в папке", command=clear_photo_folder)
+clear_folder_b.pack(pady=10)
 
 def run():
     mainplate.mainloop()

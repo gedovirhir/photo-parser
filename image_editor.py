@@ -18,10 +18,8 @@ def resize_image(input_path: str, target_size=BASE_FORMAT_SIZE):
 
 def show_image_resolution(image_path):
     try:
-        # Открываем изображение
         img = Image.open(image_path)
         
-        # Получаем разрешение изображения
         width, height = img.size
         
         print(f"Ширина: {width} пикселей")
@@ -32,3 +30,5 @@ def show_image_resolution(image_path):
 def formatting_images():
     with concurrent.futures.ThreadPoolExecutor() as exec:
         exec.map(resize_image, get_photo_files())
+        
+        exec.shutdown()
