@@ -191,7 +191,7 @@ def _save_images_callback(row, images):
     for i, photo in enumerate(images):
         _, b_img = photo
         image_name = correct_filename(p_name)
-        filename = f"{p_code}_{image_name}_{i+1}.png"
+        filename = f"{p_code}_{image_name}_{i+1}.jpg"
         
         with open(f"{photo_path}/{filename}", "wb") as f:
             f.write(b_img)

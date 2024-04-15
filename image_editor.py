@@ -12,7 +12,7 @@ def resize_image(input_path: str, target_size=BASE_FORMAT_SIZE):
     full_path = os.path.join(PHOTO_POST_PATH, input_path)
     img = cv2.imread(full_path)
 
-    img_resized = cv2.resize(img, target_size, interpolation=cv2.INTER_LINEAR)
+    img_resized = cv2.resize(img, target_size, interpolation=cv2.INTER_AREA)
     
     cv2.imwrite(f"{full_path}", img_resized)
 
