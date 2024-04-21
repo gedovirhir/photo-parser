@@ -2,7 +2,7 @@ import os
 import cv2
 from cv2.typing import MatLike
 import concurrent.futures
-from PIL import Image
+from PIL import Image, ImageFilter
 import time
 import numpy
 
@@ -15,7 +15,7 @@ def resize_image(input_path: str, target_square_size=BASE_FORMAT_SQUARE_SIZE):
         full_path = os.path.join(PHOTO_POST_PATH, input_path)
         
         pil_img = Image.open(full_path)
-        main_color = get_main_color(pil_img)
+        main_color = (255,255,255)#get_main_color(pil_img)
         spaced_img = spacing_resize(pil_img, fill_color=main_color)
         
         img = numpy.array(spaced_img)[:, :, ::-1].copy()
@@ -42,7 +42,7 @@ def proportial_rescale(img: MatLike, target_square_size=BASE_FORMAT_SQUARE_SIZE)
     
     return img_resized
 
-def spacing_resize(img: Image.Image, fill_color=(255,255,255)):
+def spacing_resize(img: Image.Image, fill_color=(255,255,255), blur_radius=5):
     x, y = img.size
     
     max_side = max((x, y))
