@@ -21,7 +21,7 @@ def resize_image(input_path: str, target_square_size=BASE_FORMAT_SQUARE_SIZE):
         img = numpy.array(spaced_img)[:, :, ::-1].copy()
         rescaled_img = proportial_rescale(img, target_square_size)
         
-        name, ext = full_path.split('.')
+        name, ext = full_path.split('.', 1)
         path, name = name.split('/')
         path = f"{path}/{name}.{ext}"
         cv2.imwrite(path, rescaled_img)
@@ -36,7 +36,7 @@ def get_main_color(img: Image.Image):
 
 def proportial_rescale(img: MatLike, target_square_size=BASE_FORMAT_SQUARE_SIZE):
     target_scale_coef = target_square_size / max(img.shape)
-    alg = cv2.INTER_CUBIC if target_scale_coef > 0 else cv2.INTER_AREA
+    alg = cv2.INTER_CUBIC if target_scale_coef > 1 else cv2.INTER_AREA
     
     img_resized = cv2.resize(img, None, fx=target_scale_coef, fy=target_scale_coef, interpolation=alg)
     
