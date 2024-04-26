@@ -10,16 +10,18 @@ from core import PHOTO_POST_PATH, get_photo_files
 
 BASE_FORMAT_SQUARE_SIZE = 500
 
-def resize_image(input_path: str, target_square_size=BASE_FORMAT_SQUARE_SIZE):
+def resize_image(input_path: str):
     try:
         full_path = os.path.join(PHOTO_POST_PATH, input_path)
         
         pil_img = Image.open(full_path)
+        square_size = BASE_FORMAT_SQUARE_SIZE if pil_img.size[0] < 1000 and pil_img.size[1] < 1000 else 1000
+        
         main_color = (255,255,255)#get_main_color(pil_img)
         spaced_img = spacing_resize(pil_img, fill_color=main_color)
         
         img = numpy.array(spaced_img)[:, :, ::-1].copy()
-        rescaled_img = proportial_rescale(img, target_square_size)
+        rescaled_img = proportial_rescale(img, square_size)
         
         name, ext = full_path.split('.', 1)
         path, name = name.split('/')
